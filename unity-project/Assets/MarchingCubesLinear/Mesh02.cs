@@ -15,8 +15,8 @@ public class Mesh02 : MonoBehaviour
 
     private void Start()
     {
-        Zoom = 25.0f;
-        SurfaceLevel = Random.Range(0.40f, 0.55f);
+        Zoom = Random.Range(24f, 26f);
+        SurfaceLevel = Random.Range(0.47f, 0.5f);
 
         InitGrid();
         BuildMesh();

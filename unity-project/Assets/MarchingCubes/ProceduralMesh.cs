@@ -10,8 +10,8 @@ public class ProceduralMesh : MonoBehaviour
 
     private void Start()
     {
-        zoom = Random.Range(10.0f, 26.0f);
-        noiselimit = Random.Range(0.3f, 0.55f);
+        zoom = 9.0f;
+        noiselimit = Random.Range(0.40f, 0.55f);
         MakeGrid();
         Noise3d();
         March();

@@ -4,14 +4,15 @@ public class ProceduralMesh : MonoBehaviour
 {
     public Vector3 GridSize = new Vector3(10, 5, 10);
     public Material material = null;
-    public float zoom = 1f;
-    public float noiselimit = 0.5f;
+    public float zoom;
+    public float noiselimit;
     private Mesh mesh = null;
 
     private void Start()
     {
+        zoom = Random.Range(10.0f, 26.0f);
+        noiselimit = Random.Range(0.3f, 0.55f);
         MakeGrid();
-        //Noise2d();
         Noise3d();
         March();
     }

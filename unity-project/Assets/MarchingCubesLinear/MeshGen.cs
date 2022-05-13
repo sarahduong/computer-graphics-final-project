@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class Mesh02 : MonoBehaviour
+public class MeshGen : MonoBehaviour
 {
     public Vector3 size = new Vector3(3, 3, 3);
     public float zoom = 1f;

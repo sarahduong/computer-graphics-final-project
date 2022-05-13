@@ -1,93 +1,52 @@
 ﻿using System.Runtime.CompilerServices;
 using UnityEngine;
 
-/*  reference: http://paulbourke.net/geometry/polygonise/
-
-    vertex 8 (0-7)
-          E4-------------F5         7654-3210
-          |               |         HGFE-DCBA
-          |               |
-    H7-------------G6     |
-    |     |         |     |
-    |     |         |     |
-    |     A0--------|----B1  
-    |               |
-    |               |
-    D3-------------C2
-
-    edge 12 (0-12)                  11
-         +------E4-------+          1098-7654-3210 
-       H7|            F5 |          LKJI-HGFE-DCBA
-      /  |           /   |
-    +-------G6------+    |
-    |    |         |     |
-    |    I8        |     J9
-    L11  |         K10   |
-    |    |         |     |
-    |    +------A0-|-----+  
-    |  D3          |   B1
-    | /            |  /
-    +-------C2------+               */
-
-#region --- helpers ---
-//Note: GridPoint is necessary use this one if you haven't made your own
-//public class GridPoint
-//{
-//    public Vector2 Position { get; set; }
-//    public float Value { get; set; }
-//}
+//gridcell with information for one cube in the volume of points
 public class GridCell
 {
-    public GridPoint[] p = new GridPoint[8];
-    public int config = 0;
-    public int numtriangles = 0;    
-    public Vector3[] edgepoint = new Vector3[12];
-    public Triangle[] triangle = new Triangle[5];
+    //8 points per cube
+    public Point[] p = new Point[8];
+    public int configuration = 0;
+
+    //number of triangles being used to create mesh
+    public int numberOfTriangles = 0;
+    public Vector3[] edge = new Vector3[12];
+    public Triangle[] tri = new Triangle[5];
 
     public void ClearCalculations()
     {
-        config = 0;
+        configuration = 0;
 
-        numtriangles = 0;
-        for (int i = 0; i < triangle.Length; i++)
+        numberOfTriangles = 0;
+        for (int i = 0; i < tri.Length; i++)
         {
-            if (triangle[i] == null)
-                triangle[i] = new Triangle();
-            triangle[i].Clear();                
+            if (tri[i] == null)
+                tri[i] = new Triangle();
+            tri[i].Clear();
         }
 
-        for (int i = 0; i < edgepoint.Length; i++)
+        for (int i = 0; i < edge.Length; i++)
         {
-            edgepoint[0] = Vector3.zero;
-            edgepoint[1] = Vector3.zero;
-            edgepoint[2] = Vector3.zero;
-            edgepoint[3] = Vector3.zero;
-            edgepoint[4] = Vector3.zero;
-            edgepoint[5] = Vector3.zero;
-            edgepoint[6] = Vector3.zero;
-            edgepoint[7] = Vector3.zero;
-            edgepoint[8] = Vector3.zero;
-            edgepoint[9] = Vector3.zero;
-            edgepoint[10] = Vector3.zero;
-            edgepoint[11] = Vector3.zero;
+            edge[0] = Vector3.zero;
+            edge[1] = Vector3.zero;
+            edge[2] = Vector3.zero;
+            edge[3] = Vector3.zero;
+            edge[4] = Vector3.zero;
+            edge[5] = Vector3.zero;
+            edge[6] = Vector3.zero;
+            edge[7] = Vector3.zero;
+            edge[8] = Vector3.zero;
+            edge[9] = Vector3.zero;
+            edge[10] = Vector3.zero;
+            edge[11] = Vector3.zero;
         }
     }
-    public string strPoints()
-    {
-        return string.Format("[{0} {1} {2} {3}] - [{4} {5} {6} {7}]",
-            p[7].Value.ToString("0.0"),
-            p[6].Value.ToString("0.0"),
-            p[5].Value.ToString("0.0"),
-            p[4].Value.ToString("0.0"),
-            p[3].Value.ToString("0.0"),
-            p[2].Value.ToString("0.0"),
-            p[1].Value.ToString("0.0"),
-            p[0].Value.ToString("0.0") );
-    }
+
 }
 public class Triangle
 {
-    public Vector3[] p = new Vector3[3];
+    //just 3 points
+    public Vector3[] parts = new Vector3[3];
 
     public Triangle()
     {
@@ -95,121 +54,54 @@ public class Triangle
     }
     public void Clear()
     {
-        p[0] = Vector3.zero;
-        p[1] = Vector3.zero;
-        p[2] = Vector3.zero;
+        parts[0] = Vector3.zero;
+        parts[1] = Vector3.zero;
+        parts[2] = Vector3.zero;
     }
 }
+
+public class Point
+{
+    //one point
+    public Vector3 Position { get; set; }
+    public float number { get; set; }
+}
+
 public static class Bits
 {
-    public static bool isSet(int value, int bitposition)
+    //helper functions for bit math
+    public static bool check(int value, int bitposition)
     {
         return ((value & (1 << bitposition)) != 0);
     }
-    public static void SetBit(ref int val, int position)
+    public static void set(ref int val, int position)
     {
         val |= (int)Mathf.Pow(2, position);
     }
-    public static void RemoveBit(ref int val, int position)
-    {
-        val &= (int)Mathf.Pow(2, position);
-    }
-    public static string BinaryFormLetters(int value, bool bit12 = false)
-    {
-        string A = ((value & (1 << 0)) != 0) ? "A" : "-";
-        string B = ((value & (1 << 1)) != 0) ? "B" : "-";
-        string C = ((value & (1 << 2)) != 0) ? "C" : "-";
-        string D = ((value & (1 << 3)) != 0) ? "D" : "-";
 
-        string E = ((value & (1 << 4)) != 0) ? "E" : "-";
-        string F = ((value & (1 << 5)) != 0) ? "F" : "-";
-        string G = ((value & (1 << 6)) != 0) ? "G" : "-";
-        string H = ((value & (1 << 7)) != 0) ? "H" : "-";
 
-        string I = ((value & (1 << 8)) != 0) ? "I" : "-";
-        string J = ((value & (1 << 9)) != 0) ? "J" : "-";
-        string K = ((value & (1 << 10)) != 0) ? "K" : "-";
-        string L = ((value & (1 << 11)) != 0) ? "L" : "-";
 
-        if (bit12 == true)
-        {
-            return (L + K + J + I) + " " + (H + G + F + E) + " " + (D + C + B + A);
-        }
-        else
-        {
-            return (H + G + F + E) + " " + (D + C + B + A);
-        }
-    }
-    public static string BinaryFormNumbers(int value, bool bit12 = false)
-    {
-        string A = ((value & (1 << 0)) != 0) ? "0" : "-";
-        string B = ((value & (1 << 1)) != 0) ? "1" : "-";
-        string C = ((value & (1 << 2)) != 0) ? "2" : "-";
-        string D = ((value & (1 << 3)) != 0) ? "3" : "-";
-
-        string E = ((value & (1 << 4)) != 0) ? "4" : "-";
-        string F = ((value & (1 << 5)) != 0) ? "5" : "-";
-        string G = ((value & (1 << 6)) != 0) ? "6" : "-";
-        string H = ((value & (1 << 7)) != 0) ? "7" : "-";
-
-        string I = ((value & (1 << 8)) != 0) ? "8" : "-";
-        string J = ((value & (1 << 9)) != 0) ? "9" : "-";
-        string K = ((value & (1 << 10)) != 0) ? "0" : "-";
-        string L = ((value & (1 << 11)) != 0) ? "1" : "-";
-
-        if (bit12 == true)
-        {
-            return (L + K + J + I) + " " + (H + G + F + E) + " " + (D + C + B + A);
-        }
-        else
-        {
-            return (H + G + F + E) + " " + (D + C + B + A);
-        }
-    }
-    public static string BinaryForm(int value, bool bit12 = false)
-    {
-        string A = ((value & (1 << 0)) != 0) ? "1" : "0";
-        string B = ((value & (1 << 1)) != 0) ? "1" : "0";
-        string C = ((value & (1 << 2)) != 0) ? "1" : "0";
-        string D = ((value & (1 << 3)) != 0) ? "1" : "0";
-
-        string E = ((value & (1 << 4)) != 0) ? "1" : "0";
-        string F = ((value & (1 << 5)) != 0) ? "1" : "0";
-        string G = ((value & (1 << 6)) != 0) ? "1" : "0";
-        string H = ((value & (1 << 7)) != 0) ? "1" : "0";
-
-        string I = ((value & (1 << 8)) != 0) ? "1" : "0";
-        string J = ((value & (1 << 9)) != 0) ? "1" : "0";
-        string K = ((value & (1 << 10)) != 0) ? "1" : "0";
-        string L = ((value & (1 << 11)) != 0) ? "1" : "0";
-
-        if (bit12 == true)
-        {
-            return (L + K + J + I) + " " + (H + G + F + E) + " " + (D + C + B + A);
-        }
-        else
-        {
-            return (H + G + F + E) + " " + (D + C + B + A);
-        }
-    }
 }
-public static class UVCoord
+
+public static class UVCoordinate
 {
-    /*  A ------ B
-        |        |
-        |        |
-        D ------ C  */
-    public static Vector2 A = new Vector2(0, 1);
-    public static Vector2 B = new Vector2(1, 1);
-    public static Vector2 C = new Vector2(1, 0);
-    public static Vector2 D = new Vector2(0, 0);
-}
-#endregion
+    //one UV coordinate
 
+    public static Vector2 First = new Vector2(0, 1);
+    public static Vector2 Second = new Vector2(1, 1);
+    public static Vector2 Third = new Vector2(1, 0);
+    public static Vector2 Fourth = new Vector2(0, 0);
+}
+
+
+
+
+//information for marching cube table taken from http://paulbourke.net/geometry/polygonise/
 public static class MarchingCube
 {
-    #region --- Marching Cube Tables (Very Important!!!) ---
-    // edge 256
+
+
+    //hex values for edges
     public static int[] edgeTable = {
         0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
         0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
@@ -243,7 +135,9 @@ public static class MarchingCube
         0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
         0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
         0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0   };
-    // triangle 256,16
+
+    //256 x 16 triangle table
+    //-1 means don't use that point, otherwise go around the triangle
     public static int[,] triangleTable = {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -501,199 +395,190 @@ public static class MarchingCube
         {0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} };
-    #endregion
 
-    public static void IsoFaces(ref GridCell cell, float surfacelevel)
+
+    public static void IsoFaces(ref GridCell cell, float noise)
     {
-        // Parameters:   
-        //  cell = GridCell to analyze for triangles
-        //  surfacelevel = GridPoint value to be less than to be considered on points
-        // Returns:
-        //  gridcell will have the number of triangles and triangles array defined
+
 
         cell.ClearCalculations();
 
-        /*  vertex 8 (0-7)
-              E4-------------F5         7654-3210
-              |               |         HGFE-DCBA
-              |               |
-        H7-------------G6     |
-        |     |         |     |
-        |     |         |     |
-        |     A0--------|----B1  
-        |               |
-        |               |
-        D3-------------C2               */
 
-        // step 1. determine cell config, corners below the surface of the mesh (inside / outside mesh) 
-        cell.config = 0;
-        if (cell.p[0].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 0);    // A =0
-        if (cell.p[1].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 1);    // B =1
-        if (cell.p[2].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 2);    // C =2
-        if (cell.p[3].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 3);    // D =3
-        if (cell.p[4].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 4);    // E =4
-        if (cell.p[5].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 5);    // F =5
-        if (cell.p[6].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 6);    // G =6
-        if (cell.p[7].Value < surfacelevel)
-            Bits.SetBit(ref cell.config, 7);    // H =7
+        //check the value of each point to see if it is above the noise level
+        //determines how it is displayed
+        //done for each point on each cube
+        //set bit for that corner to on if we want that corner to be on
+        cell.configuration = 0;
+        if (cell.p[0].number < noise)
+            Bits.set(ref cell.configuration, 0);
+        if (cell.p[1].number < noise)
+            Bits.set(ref cell.configuration, 1);
+        if (cell.p[2].number < noise)
+            Bits.set(ref cell.configuration, 2);
+        if (cell.p[3].number < noise)
+            Bits.set(ref cell.configuration, 3);
+        if (cell.p[4].number < noise)
+            Bits.set(ref cell.configuration, 4);
+        if (cell.p[5].number < noise)
+            Bits.set(ref cell.configuration, 5);
+        if (cell.p[6].number < noise)
+            Bits.set(ref cell.configuration, 6);
+        if (cell.p[7].number < noise)
+            Bits.set(ref cell.configuration, 7);
 
-        if (edgeTable[cell.config] == 0)    //cell is entirely inside/outside mesh surface (make no triangles)
+        if (edgeTable[cell.configuration] == 0)
             return;
 
-        /*  edge 12 (0-12)              11
-             +------E4-------+          1098-7654-3210 
-           H7|            F5 |          LKJI-HGFE-DCBA
-          /  |           /   |
-        +-------G6------+    |
-        |    |         |     |
-        |    I8        |     J9
-        L11  |         K10   |
-        |    |         |     |
-        |    +------A0-|-----+  
-        |  D3          |   B1
-        | /            |  /
-        +-------C2------+               */
 
-        // step 2. determine interpolated edge point positions (where applicable)
-        if (Bits.isSet(edgeTable[cell.config], 0) == true) 
-            cell.edgepoint[0] = InterpolateEdgePosition(surfacelevel, cell.p[0], cell.p[1]);
-        if (Bits.isSet(edgeTable[cell.config], 1) == true) 
-            cell.edgepoint[1] = InterpolateEdgePosition(surfacelevel, cell.p[1], cell.p[2]);
-        if (Bits.isSet(edgeTable[cell.config], 2) == true) 
-            cell.edgepoint[2] = InterpolateEdgePosition(surfacelevel, cell.p[2], cell.p[3]);
-        if (Bits.isSet(edgeTable[cell.config], 3) == true) 
-            cell.edgepoint[3] = InterpolateEdgePosition(surfacelevel, cell.p[3], cell.p[0]);
-        if (Bits.isSet(edgeTable[cell.config], 4) == true) 
-            cell.edgepoint[4] = InterpolateEdgePosition(surfacelevel, cell.p[4], cell.p[5]);
-        if (Bits.isSet(edgeTable[cell.config], 5) == true) 
-            cell.edgepoint[5] = InterpolateEdgePosition(surfacelevel, cell.p[5], cell.p[6]);
-        if (Bits.isSet(edgeTable[cell.config], 6) == true) 
-            cell.edgepoint[6] = InterpolateEdgePosition(surfacelevel, cell.p[6], cell.p[7]);
-        if (Bits.isSet(edgeTable[cell.config], 7) == true) 
-            cell.edgepoint[7] = InterpolateEdgePosition(surfacelevel, cell.p[7], cell.p[4]);
-        if (Bits.isSet(edgeTable[cell.config], 8) == true) 
-            cell.edgepoint[8] = InterpolateEdgePosition(surfacelevel, cell.p[0], cell.p[4]);
-        if (Bits.isSet(edgeTable[cell.config], 9) == true) 
-            cell.edgepoint[9] = InterpolateEdgePosition(surfacelevel, cell.p[1], cell.p[5]);
-        if (Bits.isSet(edgeTable[cell.config], 10) == true) 
-            cell.edgepoint[10] = InterpolateEdgePosition(surfacelevel, cell.p[2], cell.p[6]);
-        if (Bits.isSet(edgeTable[cell.config], 11) == true) 
-            cell.edgepoint[11] = InterpolateEdgePosition(surfacelevel, cell.p[3], cell.p[7]);
 
-        // step 3. determine triangles (iso faces)
-        for (int i = 0; triangleTable[cell.config,i] != -1; i += 3)
+        //need to figure out where edge point is for each cube
+        //where along the edge the point is
+        if (Bits.check(edgeTable[cell.configuration], 0) == true)
+            cell.edge[0] = InterpolateEdgePosition(noise, cell.p[0], cell.p[1]);
+        if (Bits.check(edgeTable[cell.configuration], 1) == true)
+            cell.edge[1] = InterpolateEdgePosition(noise, cell.p[1], cell.p[2]);
+        if (Bits.check(edgeTable[cell.configuration], 2) == true)
+            cell.edge[2] = InterpolateEdgePosition(noise, cell.p[2], cell.p[3]);
+        if (Bits.check(edgeTable[cell.configuration], 3) == true)
+            cell.edge[3] = InterpolateEdgePosition(noise, cell.p[3], cell.p[0]);
+        if (Bits.check(edgeTable[cell.configuration], 4) == true)
+            cell.edge[4] = InterpolateEdgePosition(noise, cell.p[4], cell.p[5]);
+        if (Bits.check(edgeTable[cell.configuration], 5) == true)
+            cell.edge[5] = InterpolateEdgePosition(noise, cell.p[5], cell.p[6]);
+        if (Bits.check(edgeTable[cell.configuration], 6) == true)
+            cell.edge[6] = InterpolateEdgePosition(noise, cell.p[6], cell.p[7]);
+        if (Bits.check(edgeTable[cell.configuration], 7) == true)
+            cell.edge[7] = InterpolateEdgePosition(noise, cell.p[7], cell.p[4]);
+        if (Bits.check(edgeTable[cell.configuration], 8) == true)
+            cell.edge[8] = InterpolateEdgePosition(noise, cell.p[0], cell.p[4]);
+        if (Bits.check(edgeTable[cell.configuration], 9) == true)
+            cell.edge[9] = InterpolateEdgePosition(noise, cell.p[1], cell.p[5]);
+        if (Bits.check(edgeTable[cell.configuration], 10) == true)
+            cell.edge[10] = InterpolateEdgePosition(noise, cell.p[2], cell.p[6]);
+        if (Bits.check(edgeTable[cell.configuration], 11) == true)
+            cell.edge[11] = InterpolateEdgePosition(noise, cell.p[3], cell.p[7]);
+
+
+        //make triangles since we know where the edge point is now 
+        //done for every three points
+        for (int i = 0; triangleTable[cell.configuration, i] != -1; i += 3)
         {
-            cell.triangle[cell.numtriangles].p[0] = cell.edgepoint[triangleTable[cell.config, i]];
-            cell.triangle[cell.numtriangles].p[1] = cell.edgepoint[triangleTable[cell.config, i + 1]];
-            cell.triangle[cell.numtriangles].p[2] = cell.edgepoint[triangleTable[cell.config, i + 2]];
-            cell.numtriangles++;
+            cell.tri[cell.numberOfTriangles].parts[0] = cell.edge[triangleTable[cell.configuration, i]];
+            cell.tri[cell.numberOfTriangles].parts[1] = cell.edge[triangleTable[cell.configuration, i + 1]];
+            cell.tri[cell.numberOfTriangles].parts[2] = cell.edge[triangleTable[cell.configuration, i + 2]];
+            cell.numberOfTriangles++;
         }
     }
-    public static Vector3 InterpolateEdgePosition(float isolevel, GridPoint vertex1, GridPoint vertex2)
+    public static Vector3 InterpolateEdgePosition(float iso, Point point1, Point point2)
     {
-        Vector3 pointOnEdge = Vector3.zero;
+        //want to find where the edge is
+        Vector3 answerPoint = Vector3.zero;
 
-        if (Mathf.Approximately(isolevel - vertex1.Value, 0) == true) return vertex1.Position;
-        if (Mathf.Approximately(isolevel - vertex2.Value, 0) == true) return vertex2.Position;
-        if (Mathf.Approximately(vertex1.Value - vertex2.Value, 0) == true) return vertex1.Position;
+        //unity math function
+        //close enough to point, just give back that point
+        if (Mathf.Approximately(iso - point1.number, 0) == true) return point1.Position;
+        if (Mathf.Approximately(iso - point2.number, 0) == true) return point2.Position;
+        if (Mathf.Approximately(point1.number - point2.number, 0) == true) return point1.Position;
 
-        float mu = (isolevel - vertex1.Value) / (vertex2.Value - vertex1.Value);
-        pointOnEdge.x = vertex1.Position.x + mu * (vertex2.Position.x - vertex1.Position.x);
-        pointOnEdge.y = vertex1.Position.y + mu * (vertex2.Position.y - vertex1.Position.y);
-        pointOnEdge.z = vertex1.Position.z + mu * (vertex2.Position.z - vertex1.Position.z);
+        //if not just using point, calculate along edge where the edge point should be
+        float mu = (iso - point1.number) / (point2.number - point1.number);
+        answerPoint.x = point1.Position.x + mu * (point2.Position.x - point1.Position.x);
+        answerPoint.y = point1.Position.y + mu * (point2.Position.y - point1.Position.y);
+        answerPoint.z = point1.Position.z + mu * (point2.Position.z - point1.Position.z);
 
-        return pointOnEdge;
+        return answerPoint;
     }
-    public static Mesh GetMesh(ref GameObject go, ref Material material, bool bCollider)
+
+    public static Mesh GetMesh(ref GameObject gameObject, ref Material mat, bool collider)
     {
-        Mesh m = null;
+        //add mesh renderer, set material etc
+        Mesh mesh = null;
 
-        MeshRenderer mr = go.GetComponent<MeshRenderer>();
-        if (mr == null)
+        MeshRenderer renderer = gameObject.GetComponent<MeshRenderer>();
+        if (renderer == null)
         {
-            mr = go.AddComponent<MeshRenderer>();
+            renderer = gameObject.AddComponent<MeshRenderer>();
         }
-        mr.material = material;
+        renderer.material = mat;
 
-        MeshFilter mf = go.GetComponent<MeshFilter>();
-        if (mf == null)
+        MeshFilter filter = gameObject.GetComponent<MeshFilter>();
+        if (filter == null)
         {
-            mf = go.AddComponent<MeshFilter>();
+            filter = gameObject.AddComponent<MeshFilter>();
         }
 
         if (Application.isEditor == true)
         {
-            if (mf.sharedMesh == null)
+            if (filter.sharedMesh == null)
             {
-                mf.sharedMesh = new Mesh();
+                filter.sharedMesh = new Mesh();
             }
-            m = mf.sharedMesh;
+            mesh = filter.sharedMesh;
         }
         else
         {
-            if (mf.mesh == null)
+            if (filter.mesh == null)
             {
-                mf.mesh = new Mesh();
+                filter.mesh = new Mesh();
             }
-            m = mf.mesh;
+            mesh = filter.mesh;
         }
-        m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; // 4 billion vertices max
-        m.name = "Procedural Mesh";
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
-        if (bCollider == true)
+        mesh.name = "Procedural Mesh";
+
+        if (collider == true)
         {
-            MeshCollider mc = go.GetComponent<MeshCollider>();
-            if (mc == null)
+            MeshCollider myCollider = gameObject.GetComponent<MeshCollider>();
+            if (myCollider == null)
             {
-                mc = go.AddComponent<MeshCollider>();
+                myCollider = gameObject.AddComponent<MeshCollider>();
             }
-            mc.sharedMesh = mf.mesh;
+            myCollider.sharedMesh = filter.mesh;
         }
 
-        return m;
+        return mesh;
     }
-    public static Mesh SetMesh(ref GameObject go, ref Vector3[] vertices, ref int[] triangles, ref Vector2[] uv)
+    public static Mesh SetMesh(ref GameObject gameObject, ref Vector3[] verts, ref int[] tri, ref Vector2[] uv)
     {
-        Mesh m = go.GetComponent<MeshFilter>().mesh;
+        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
 
-        m.Clear();
+        mesh.Clear();
 
-        m.vertices = vertices;
-        m.triangles = triangles;
-        m.uv = uv;
+        mesh.vertices = verts;
+        mesh.triangles = tri;
+        mesh.uv = uv;
 
-        m.RecalculateBounds();
-        m.RecalculateNormals();
-        //m.RecalculateTangents();  //if using URP (universal render pipeline)
+        //recalculate normals for lighting
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
 
-        MeshCollider mc = go.GetComponent<MeshCollider>();
-        if (mc != null)
+
+        MeshCollider collider = gameObject.GetComponent<MeshCollider>();
+        if (collider != null)
         {
-            mc.sharedMesh = m;
+            collider.sharedMesh = mesh;
         }
 
-        return m;
+        return mesh;
     }
+
     public static float Perlin3D(float x, float y, float z)
     {
-        //Note: x,y,z should be between 0.0 - 1.0 (whole numbers will only return same value)
 
-        float AB = Mathf.PerlinNoise(x, y);         // get all three(3) permutations of noise for x,y and z
-        float BC = Mathf.PerlinNoise(y, z);
-        float AC = Mathf.PerlinNoise(x, z);
 
-        float BA = Mathf.PerlinNoise(y, x);         // and their reverses
-        float CB = Mathf.PerlinNoise(z, y);
-        float CA = Mathf.PerlinNoise(z, x);
+        float XY = Mathf.PerlinNoise(x, y);
+        float YZ = Mathf.PerlinNoise(y, z);
+        float XZ = Mathf.PerlinNoise(x, z);
 
-        float ABC = AB + BC + AC + BA + CB + CA;    // and return the average
+        float YX = Mathf.PerlinNoise(y, x);
+        float ZY = Mathf.PerlinNoise(z, y);
+        float ZX = Mathf.PerlinNoise(z, x);
+
+        //return average of the noise function
+        //random perlin noise value in 3D space
+        float ABC = XY + YZ + XZ + YX + ZY + ZX;
+
         return ABC / 6f;
     }
 }

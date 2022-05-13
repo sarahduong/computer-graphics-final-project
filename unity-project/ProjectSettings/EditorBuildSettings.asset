@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/GrassyTerrain/GrassFlowerTerrain.unity
     guid: 679e28dd92e786342b7944447228f70c
+  - enabled: 1
+    path: Assets/End Menu Scene.unity
+    guid: 2c616366836c90d47bd9479bd8b5c11a
   m_configObjects: {}

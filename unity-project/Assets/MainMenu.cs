@@ -8,12 +8,12 @@ public class MainMenu : MonoBehaviour
     // Start is called before the first frame update
     public void StartGame()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1); // change to gameplay scene
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex+1); // index to gameplay scene (scene 1)
     }
 
     // Update is called once per frame
-    public void Update()
+    public void QuitGame()
     {
-        
+        Application.Quit();
     }
 }
